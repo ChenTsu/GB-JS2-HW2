@@ -16,6 +16,9 @@
  * Удачи!
  */
 
+///////////////////////////////////////////////
+// эту работу можжно выложить в общий доступ //
+///////////////////////////////////////////////
 window.onload = function()
 {
     var user_roles = [{id: 10, title: "Админ"},{id: 20, title: "Пользователь"}];
@@ -49,22 +52,22 @@ window.onload = function()
     }
 
     function tagTextEditor(nodeElement) {
-        // if (typeof nodeElement == 'string') {
-        //     nodeElement = document.querySelectorAll(nodeElement); //Get Elements with selector variable
-        //     for ( var u=0; u<nodeElement.length; u++ )
-        //     {
-        //         fieldChanger( nodeElement[u] );
-        //         textApply();
-        //     }
-        // }
-        // else if ( typeof  nodeElement === 'object')
-        // {
-        //     fieldChanger( nodeElement );
-        // }
-        // else
-        // {
-        //     return false;
-        // }
+        /*if (typeof nodeElement == 'string') {
+            nodeElement = document.querySelectorAll(nodeElement); //Get Elements with selector variable
+            for ( var u=0; u<nodeElement.length; u++ )
+            {
+                fieldChanger( nodeElement[u] );
+                textApply();
+            }
+        }
+        else if ( typeof  nodeElement === 'object')
+        {
+            fieldChanger( nodeElement );
+        }
+        else
+        {
+            return false;
+        }*/
 
         // наши ячейки имзменяемой строки
         var cells =  nodeElement.querySelectorAll('TD');
@@ -101,8 +104,9 @@ window.onload = function()
         nodeElement.lastElementChild.firstElementChild.classList.add('hidden');
         nodeElement.lastElementChild.lastElementChild.classList.add('hidden');
 
-        // добавляем кнопку сохранить
+        // пробел между кнопками
         nodeElement.lastElementChild.appendChild( document.createTextNode(' '));
+        // добавляем кнопку сохранить
         nodeElement.lastElementChild.appendChild( new_btn );
 
         // создаём кнопку отмены
@@ -130,6 +134,7 @@ window.onload = function()
         // console.log(nodeElement.lastElementChild);
 
         function saveChanges() {
+            // было бы правильней получить названия полей от сервера
             var fields = ['id', 'username', 'role', 'email', 'active'];
             var request = 'edit.php?';
 
@@ -242,8 +247,8 @@ window.onload = function()
     }
 
     function editUser() {
-        var row = this.parentNode.parentNode;
-        tagTextEditor(row);
+        // отправляем tr в которой наша кнопка на изменение ячеек
+        tagTextEditor(this.parentNode.parentNode);
     }
 
     /// назначаем обработчик на кнопки удаления записи
