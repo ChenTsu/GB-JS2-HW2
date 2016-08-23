@@ -66,23 +66,26 @@ window.onload = function()
         //     return false;
         // }
 
-        // проходим по ячейкам пропуская текстовые ноды и "служебные" ячейки и ставим туда инпуты
-        // for ( var u=2; u<nodeElement.childNodes.length-2; u++)
-        // {
-        //     if ( nodeElement.childNodes[u].tagName === 'TD')
-        //     {
-        //         fieldChanger(nodeElement.childNodes[u]);
-        //     }
-        // }
-        var tmp = nodeElement.querySelectorAll('TD');
-        for ( var u=1; u<tmp.length-1; u++)
+        // наши ячейки имзменяемой строки
+        var cells =  nodeElement.querySelectorAll('TD');
+        // массив с начальными значениями ячеек
+        var fields_values = [];
+        // достаём значения из полей
+        for ( var u=0; u<cells[u]-1; u++)
         {
-            fieldChanger(tmp[u]);
+            if ( cells[u].firstElementChild.getAttribute('type') === 'checkbox' ) // checkbox  у нас особенный, у него value не value, всю красоту портит
+            {
+                fields_values.push ( cells[u].firstElementChild.checked );
+            }
+            else
+            {
+                fields_values.push (cells[u].firstElementChild.value );
+            }
         }
-        console.log(nodeElement.lastElementChild);
+
 
         // прячем кнопки редактирования и удаления. добавляем кнопку сохранения
-
+        // создаём кнопку сохранить
         var new_btn =  document.createElement('button');
         new_btn.classList.add('btn','btn-sm','btn-success','btn-ok');
         new_btn.setAttribute('type','button');
@@ -102,26 +105,50 @@ window.onload = function()
         nodeElement.lastElementChild.appendChild( document.createTextNode(' '));
         nodeElement.lastElementChild.appendChild( new_btn );
 
+        // создаём кнопку отмены
+        var new_btn =  document.createElement('button');
+        new_btn.classList.add('btn','btn-sm','btn-warning','btn-cancel');
+        new_btn.setAttribute('type','button');
+        new_btn.setAttribute('data-id',nodeElement.lastElementChild.firstElementChild.getAttribute('data-id'));
+
+        // назначаем обработчик на кнопку отмены
+        new_btn.onclick = cancelChanges;
+        var btn_icon = document.createElement('SPAN');
+            btn_icon.classList.add('fa', 'fa-times');
+        new_btn.appendChild(btn_icon);
+
+        // добавляем кнопку отмена
+        nodeElement.lastElementChild.appendChild( document.createTextNode(' '));
+        nodeElement.lastElementChild.appendChild( new_btn );
+
+        // находим наши ячейки и делаем их полями для ввода
+        var tmp = nodeElement.querySelectorAll('TD');
+        for ( u=1; u<tmp.length-1; u++)
+        {
+            fieldChanger(tmp[u]);
+        }
+        // console.log(nodeElement.lastElementChild);
 
         function saveChanges() {
-            var fields = ['username', 'role', 'email', 'active'];
+            var fields = ['id', 'username', 'role', 'email', 'active'];
             var request = 'edit.php?';
-            var values = [];
 
-            // достаём значения из полей
-            for ( var u=2; u<nodeElement.childNodes.length-2; u++)
-            {
-                if ( nodeElement.childNodes[u].tagName === 'TD')
-                {
-                    values.push( nodeElement.childNodes[u].firstElementChild.value );
-                }
-            }
-            // готовим строку запроса
-            for ( u=0; u<values.length; u++)
+            // достаём значения из полей  и готовим строку запроса
+            for ( var u=0; u<cells-1; u++)
             {
                 if ( u>0 ) request += '&';
-                request += fields[u] + '=' + values[u];
+                if ( cells[u].firstElementChild.getAttribute('type') === 'checkbox' ) // checkbox  у нас особенный, у него value не value, всю красоту портит
+                {
+                    fields_values.push ( cells[u].firstElementChild.checked );
+                    request += fields[u] + '=' + fields_values[u]  ;
+                }
+                else
+                {
+                    fields_values.push (cells[u].firstElementChild.value );
+                    request += fields[u] + '=' + fields_values[u] ;
+                }
             }
+
 
             var xhr = new XMLHttpRequest();
 
@@ -133,15 +160,13 @@ window.onload = function()
 
                 if (response.status === 'ok') // сервер обработал успешно
                 {
-                    // опять проходим по нашей строке и подстовляем вместо инпутов текст из инпутов
-                    for ( var u=2; u<nodeElement.childNodes.length-2; u++)
+                    // опять проходим по нашей строке и подставляем вместо инпутов текст из инпутов
+                    for ( u=1; u<cells-1; u++)
                     {
-                        if ( nodeElement.childNodes[u].tagName === 'TD')
-                        {
-                            nodeElement.childNodes[u].textContent = nodeElement.childNodes[u].firstElementChild.value;
-                        }
+                        cells[u].innerText = values[u];
                     }
                     console.log(nodeElement.lastElementChild);
+                    nodeElement.lastElementChild.lastElementChild.remove(); // удаляем кнопку отмены
                     nodeElement.lastElementChild.lastElementChild.remove(); // удаляем кнопку сохранения
                     nodeElement.lastElementChild.firstElementChild.classList.remove('hidden'); // отображаем кнопки
                     nodeElement.lastElementChild.lastElementChild.classList.remove('hidden');
@@ -150,51 +175,67 @@ window.onload = function()
             };
             xhr.send();
         }
+        function cancelChanges() {
+            var cells =  nodeElement.querySelectorAll('TD');
+
+            // достаём значения из полей  и записываем в ячейки
+            console.log(fields_values);
+            for ( var u=1; u<cells.length-1; u++)
+            {
+                console.log(cells[u]);
+                cells[u].innerText = fields_values[u];
+            }
+            nodeElement.lastElementChild.lastElementChild.remove(); // удаляем кнопку отмены
+            nodeElement.lastElementChild.lastElementChild.remove(); // удаляем кнопку сохранения
+            nodeElement.lastElementChild.firstElementChild.classList.remove('hidden'); // отображаем кнопки
+            nodeElement.lastElementChild.lastElementChild.classList.remove('hidden');
+        }
+
         function fieldChanger(element)
         {
-            var tmp = element.getAttribute('data-type');
+            var tmp = element.getAttribute('data-field');
             if ( tmp === 'select')
             {
                 tmp = createSelectElement(user_roles);
                 for ( var i =0; i<user_roles.length; i++ )
                 {
-                    if ( element.textContent === user_roles[i].title )
+                    if ( parseInt(element.getAttribute('data-userid')) === user_roles[i].id )
                     {
                         tmp.querySelector('option:nth-child('+(i+1)+')').setAttribute('selected','selected');
                     }
                 }
-                element.textContent = '';
+                element.innerHTML = '';
                 element.appendChild(tmp);
             }
             else if ( tmp === 'checkbox' )
             {
                 tmp = document.createElement('INPUT');
                 tmp.setAttribute( 'type', 'checkbox');
-                if ( element.textContent === 'Активен' )
+                if ( element.getAttribute('data-active') == true )
                 {
                     tmp.checked = true;
                 }
-                element.textContent = '';
+                element.innerHTML = '';
                 element.appendChild(tmp);
                 element.appendChild( document.createTextNode(' Активен') );
             }
-            else  // остались только поля text
+            else  // остались только поля text-input
             {
                 tmp = document.createElement('INPUT');
                 tmp.setAttribute( 'type', 'text');
-                tmp.value = element.textContent;
-                element.textContent = '';
+                tmp.value = element.innerText;
+                element.innerHTML = '';
                 element.appendChild(tmp);
             }
         }
-        function createSelectElement(object) {
 
+        function createSelectElement(object) {
             var select = document.createElement('SELECT');
             for ( var i=0; i<object.length; i++)
             {
                 select.appendChild( document.createElement('OPTION'));
-                select.lastElementChild.textContent = object[i].title;
-                select.lastElementChild.value = object[i].value;
+                select.lastElementChild.innerText = object[i].title;
+                select.lastElementChild.value = object[i].id;
             }
             return select;
         }
@@ -202,18 +243,7 @@ window.onload = function()
 
     function editUser() {
         var row = this.parentNode.parentNode;
-        // console.log(row);
-
         tagTextEditor(row);
-
-        // console.log( row.length);
-        // console.log( row);
-        // console.log( typeof row);
-        // row = document.querySelectorAll('td');
-        // console.log ( row[1].textContent);
-        // console.log ( typeof row[0]);
-
-
     }
 
     /// назначаем обработчик на кнопки удаления записи
