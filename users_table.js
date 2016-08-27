@@ -334,6 +334,7 @@ window.onload = function()
 
                 td = document.createElement('td');
                 td.innerHTML = username;
+                td.setAttribute( 'data-field', 'input');
 
                 row.appendChild(td);
 
@@ -348,11 +349,14 @@ window.onload = function()
                     }
                 }
                 td.innerHTML = user_role;
+                td.setAttribute('data-field', 'select');
+                td.setAttribute('data-userid', role);
 
                 row.appendChild(td);
 
                 td = document.createElement('td');
                 td.innerHTML = email;
+                td.setAttribute( 'data-field', 'input');
 
                 row.appendChild(td);
 
@@ -365,7 +369,7 @@ window.onload = function()
                 {
                     td.innerHTML = "Неактивен";
                 }
-
+                td.setAttribute('data-field', 'checkbox');
                 row.appendChild(td);
 
                 // control buttons cell
