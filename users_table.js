@@ -22,6 +22,7 @@
 window.onload = function()
 {
     var user_roles = [{id: 10, title: "Админ"},{id: 20, title: "Пользователь"}];
+    var users_status = {'true': 'Активен', 'false':'Неактивен'};
 
 
     function confirmDeleteUser()
@@ -56,13 +57,13 @@ window.onload = function()
             nodeElement = document.querySelectorAll(nodeElement); //Get Elements with selector variable
             for ( var u=0; u<nodeElement.length; u++ )
             {
-                fieldChanger( nodeElement[u] );
+                cellToInput( nodeElement[u] );
                 textApply();
             }
         }
         else if ( typeof  nodeElement === 'object')
         {
-            fieldChanger( nodeElement );
+            cellToInput( nodeElement );
         }
         else
         {
@@ -70,22 +71,12 @@ window.onload = function()
         }*/
 
         // наши ячейки имзменяемой строки
-        var cells =  nodeElement.querySelectorAll('TD');
+        var cells;
+        var cells_length;
         // массив с начальными значениями ячеек
         var fields_values = [];
-        // достаём значения из полей
-        for ( var u=0; u<cells[u]-1; u++)
-        {
-            if ( cells[u].firstElementChild.getAttribute('type') === 'checkbox' ) // checkbox  у нас особенный, у него value не value, всю красоту портит
-            {
-                fields_values.push ( cells[u].firstElementChild.checked );
-            }
-            else
-            {
-                fields_values.push (cells[u].firstElementChild.value );
-            }
-        }
-
+        // достаём значения из полей && берём наши ячейки и делаем их полями для ввода
+        cellsToInput();
 
         // прячем кнопки редактирования и удаления. добавляем кнопку сохранения
         // создаём кнопку сохранить
@@ -125,35 +116,35 @@ window.onload = function()
         nodeElement.lastElementChild.appendChild( document.createTextNode(' '));
         nodeElement.lastElementChild.appendChild( new_btn );
 
-        // находим наши ячейки и делаем их полями для ввода
-        var tmp = nodeElement.querySelectorAll('TD');
-        for ( u=1; u<tmp.length-1; u++)
-        {
-            fieldChanger(tmp[u]);
-        }
-        // console.log(nodeElement.lastElementChild);
-
         function saveChanges() {
             // было бы правильней получить названия полей от сервера
             var fields = ['id', 'username', 'role', 'email', 'active'];
             var request = 'edit.php?';
+            var _values = []; // значения из таблицы в момент нажатия сохранить
 
             // достаём значения из полей  и готовим строку запроса
-            for ( var u=0; u<cells-1; u++)
+            for ( var u=0; u<cells_length-1; u++)
             {
-                if ( u>0 ) request += '&';
+                if ( u===0 ) // тут у нас id
+                {
+                    _values.push(cells[u].innerText);
+                    request += fields[u] + '=' + _values[u]  ;
+                    continue;
+                }
+                else request += '&';
+
                 if ( cells[u].firstElementChild.getAttribute('type') === 'checkbox' ) // checkbox  у нас особенный, у него value не value, всю красоту портит
                 {
-                    fields_values.push ( cells[u].firstElementChild.checked );
-                    request += fields[u] + '=' + fields_values[u]  ;
+                    _values.push ( cells[u].firstElementChild.checked );
+                    request += fields[u] + '=' + _values[u]  ;
                 }
                 else
                 {
-                    fields_values.push (cells[u].firstElementChild.value );
-                    request += fields[u] + '=' + fields_values[u] ;
+                    _values.push (cells[u].firstElementChild.value );
+                    request += fields[u] + '=' + _values[u] ;
                 }
             }
-
+            // console.log ( request );
 
             var xhr = new XMLHttpRequest();
 
@@ -166,72 +157,111 @@ window.onload = function()
                 if (response.status === 'ok') // сервер обработал успешно
                 {
                     // опять проходим по нашей строке и подставляем вместо инпутов текст из инпутов
-                    for ( u=1; u<cells-1; u++)
-                    {
-                        cells[u].innerText = values[u];
-                    }
-                    console.log(nodeElement.lastElementChild);
-                    nodeElement.lastElementChild.lastElementChild.remove(); // удаляем кнопку отмены
-                    nodeElement.lastElementChild.lastElementChild.remove(); // удаляем кнопку сохранения
-                    nodeElement.lastElementChild.firstElementChild.classList.remove('hidden'); // отображаем кнопки
-                    nodeElement.lastElementChild.lastElementChild.classList.remove('hidden');
+                    inputToCell(_values);
+                }
+                else
+                {
+                    inputToCell(fields_values);
+                    alert ( 'Ошибка. Сохранить изменения не удалось.');
                 }
 
+                nodeElement.lastElementChild.lastElementChild.remove(); // удаляем кнопку отмены
+                nodeElement.lastElementChild.lastElementChild.remove(); // удаляем кнопку сохранения
+                nodeElement.lastElementChild.firstElementChild.classList.remove('hidden'); // отображаем кнопки
+                nodeElement.lastElementChild.lastElementChild.classList.remove('hidden');
             };
             xhr.send();
         }
         function cancelChanges() {
-            var cells =  nodeElement.querySelectorAll('TD');
+            // var cells =  nodeElement.querySelectorAll('TD');
 
             // достаём значения из полей  и записываем в ячейки
-            console.log(fields_values);
-            for ( var u=1; u<cells.length-1; u++)
-            {
-                console.log(cells[u]);
-                cells[u].innerText = fields_values[u];
-            }
+            inputToCell(fields_values);
+
             nodeElement.lastElementChild.lastElementChild.remove(); // удаляем кнопку отмены
             nodeElement.lastElementChild.lastElementChild.remove(); // удаляем кнопку сохранения
             nodeElement.lastElementChild.firstElementChild.classList.remove('hidden'); // отображаем кнопки
             nodeElement.lastElementChild.lastElementChild.classList.remove('hidden');
         }
 
-        function fieldChanger(element)
-        {
-            var tmp = element.getAttribute('data-field');
-            if ( tmp === 'select')
+        function inputToCell(values) {
+            for (var u=0; u<cells_length-1; u++)
             {
-                tmp = createSelectElement(user_roles);
-                for ( var i =0; i<user_roles.length; i++ )
+                // console.log(cells[u]);
+                if ( cells[u].getAttribute('data-field') === 'checkbox')
                 {
-                    if ( parseInt(element.getAttribute('data-userid')) === user_roles[i].id )
+                    cells[u].innerHTML = users_status[ values[u] ];
+                    cells[u].setAttribute('data-active', values[u]);
+                }
+                else if ( cells[u].getAttribute('data-field')==='select')
+                {
+                    for ( var i=0; i<user_roles.length; i++)
                     {
-                        tmp.querySelector('option:nth-child('+(i+1)+')').setAttribute('selected','selected');
+                        if ( parseInt(values[u]) === user_roles[i].id)
+                        {
+                            cells[u].innerHTML = user_roles[i].title;
+                            cells[u].setAttribute('data-userid', user_roles[i].id);
+                        }
                     }
                 }
-                element.innerHTML = '';
-                element.appendChild(tmp);
+                else
+                    cells[u].innerHTML = values[u];
             }
-            else if ( tmp === 'checkbox' )
-            {
-                tmp = document.createElement('INPUT');
-                tmp.setAttribute( 'type', 'checkbox');
-                if ( element.getAttribute('data-active') == true )
-                {
-                    tmp.checked = true;
-                }
-                element.innerHTML = '';
-                element.appendChild(tmp);
-                element.appendChild( document.createTextNode(' Активен') );
-            }
-            else  // остались только поля text-input
-            {
-                tmp = document.createElement('INPUT');
-                tmp.setAttribute( 'type', 'text');
-                tmp.value = element.innerText;
-                element.innerHTML = '';
-                element.appendChild(tmp);
-            }
+        }
+
+        function cellsToInput()
+        {
+            cells =  nodeElement.querySelectorAll('TD');
+            cells_length = cells.length;
+            fields_values = []; // на всяк случай чистим массив
+
+            fields_values.push( cells[0].innerText );
+
+           for  ( var  u = 1; u<cells_length-1; u++ )
+           {
+               var tmp = cells[u].getAttribute('data-field');
+
+               if ( tmp === 'select')
+               {
+                   tmp = createSelectElement(user_roles);
+                   for ( var i =0; i<user_roles.length; i++ )
+                   {
+                       if ( parseInt(cells[u].getAttribute('data-userid')) === user_roles[i].id )
+                       {
+                           tmp.querySelector('option:nth-child('+(i+1)+')').setAttribute('selected','selected');
+                           fields_values[u]=user_roles[i].id;
+                       }
+                   }
+                   cells[u].innerHTML = '';
+                   cells[u].appendChild(tmp);
+               }
+               else if ( tmp === 'checkbox' )
+               {
+                   tmp = document.createElement('INPUT');
+                   tmp.setAttribute( 'type', 'checkbox');
+                   if ( cells[u].getAttribute('data-active') == 'true' )
+                   {
+                       tmp.checked = true;
+                       fields_values.push( 'true');
+                   }
+                   else {
+                       tmp.checked = false;
+                       fields_values.push( 'false');
+                   }
+                   cells[u].innerHTML = '';
+                   cells[u].appendChild(tmp);
+                   cells[u].appendChild( document.createTextNode(' Активен') );
+               }
+               else  // остались только поля text-input
+               {
+                   tmp = document.createElement('INPUT');
+                   tmp.setAttribute( 'type', 'text');
+                   tmp.value = cells[u].innerText;
+                   fields_values[u] = cells[u].innerText;
+                   cells[u].innerHTML = '';
+                   cells[u].appendChild(tmp);
+               }
+           }
         }
 
         function createSelectElement(object) {
